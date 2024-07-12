@@ -6,6 +6,7 @@ use Intervention\Image\Geometry\Point;
 use Intervention\Image\Geometry\Polygon;
 use Intervention\Image\Geometry\Rectangle;
 use Intervention\Image\Drivers\Imagick\Driver as ImagickDriver;
+use Intervention\Image\Drivers\Gd\Driver as GdDriver;
 use Intervention\Image\Interfaces\ColorInterface;
 use Intervention\Image\Interfaces\ImageInterface;
 use Intervention\Image\Modifiers\TextModifier;
@@ -80,28 +81,56 @@ class TextBox extends Box
 
     protected function generateModifier(string $text, Point $position = new Point()): CustomTextModifier
     {
-        return CustomTextModifier::buildSpecialized(
-            new TextModifier(
-                $text,
-                $position,
-                (new FontFactory(
-                    function(FontFactory $factory) {
-                        $factory->filename($this->font->path());
-                        $factory->size($this->size);
-                        $factory->color($this->color);
+        if ( extension_loaded('imagick') ) {
+                
+            return new CustomTextModifier(
+                new TextModifier(
+                    $text,
+                    $position,
+                    (new FontFactory(
+                        function(FontFactory $factory) {
+                            $factory->filename($this->font->path());
+                            $factory->size($this->size);
+                            $factory->color($this->color);
 
-                        if (isset($this->hAlign)) {
-                            $factory->align($this->hAlign);
+                            if (isset($this->hAlign)) {
+                                $factory->align($this->hAlign);
+                            }
+
+                            $factory->valign($this->vAlign ?? 'top');
+
+                            $factory->lineHeight($this->lineHeight ?? 1.6);
                         }
+                    ))()
+                ),
+                new ImagickDriver
+            );
 
-                        $factory->valign($this->vAlign ?? 'top');
+        } else {
+                
+            return new CustomTextModifier(
+                new TextModifier(
+                    $text,
+                    $position,
+                    (new FontFactory(
+                        function(FontFactory $factory) {
+                            $factory->filename($this->font->path());
+                            $factory->size($this->size);
+                            $factory->color($this->color);
 
-                        $factory->lineHeight($this->lineHeight ?? 1.6);
-                    }
-                ))()
-            ),
-            new ImagickDriver
-        );
+                            if (isset($this->hAlign)) {
+                                $factory->align($this->hAlign);
+                            }
+
+                            $factory->valign($this->vAlign ?? 'top');
+
+                            $factory->lineHeight($this->lineHeight ?? 1.6);
+                        }
+                    ))()
+                ),
+                new GdDriver
+            );
+        }
     }
 
     protected function doesTextFitInBox(Rectangle $renderedBox): bool

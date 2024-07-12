@@ -58,6 +58,8 @@ class PictureBox extends Box
             $width = $this->getPrerenderedBox()->width();
             $start = intval(floor($width / 2));
 
+            // this'll bust gd image.
+
             // Create the circle
             $circle = new ImagickDraw();
             $circle->setFillColor(new ImagickPixel('#fff'));
@@ -89,8 +91,19 @@ class PictureBox extends Box
 
     protected function getPicture(): ImageInterface
     {
-        $this->picture ??= ImageManager::imagick()
-            ->read(file_get_contents($this->path));
+
+        // imagick -> gd image fallback
+        if ( extension_loaded('imagick') ) {
+
+            $this->picture ??= ImageManager::imagick()
+                ->read(file_get_contents($this->path));
+
+        } else {
+
+            $this->picture ??= ImageManager::gd()
+                ->read(file_get_contents($this->path));
+
+        }
 
         match ($this->placement) {
             PicturePlacement::Cover => $this->picture->cover($this->box->width(), $this->box->height()),

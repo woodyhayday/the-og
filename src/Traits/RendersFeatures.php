@@ -21,7 +21,16 @@ trait RendersFeatures
     {
         $this->config = $config;
 
-        $this->manager = ImageManager::imagick();
+        // imagick -> gd image fallback
+        if ( extension_loaded('imagick') ) {
+
+            $this->manager = ImageManager::imagick();
+
+        } else {
+
+            $this->manager = ImageManager::gd();
+
+        }
 
         $this->canvas = $this->manager->create($this->width, $this->height)
             ->fill($this->config->theme->getBackgroundColor());
@@ -132,16 +141,22 @@ trait RendersFeatures
 
         $panel = $this->manager->read($data ?? $path);
 
-        $imagick = $panel->core()->native();
+        // without imagick this fails
+        // ... gd opacity doesn't seem to be working in intervention either :thinking-face:
+        if ( extension_loaded('imagick') ) {
 
-        $imagick->setImageVirtualPixelMethod(1);
-        $imagick->setImageAlphaChannel(Imagick::ALPHACHANNEL_ACTIVATE);
+            $imagick = $panel->core()->native();
 
-        $imagick->evaluateImage(
-            Imagick::EVALUATE_MULTIPLY,
-            $background->opacity(),
-            Imagick::CHANNEL_ALPHA
-        );
+            $imagick->setImageVirtualPixelMethod(1);
+            $imagick->setImageAlphaChannel(Imagick::ALPHACHANNEL_ACTIVATE);
+
+            $imagick->evaluateImage(
+                Imagick::EVALUATE_MULTIPLY,
+                $background->opacity(),
+                Imagick::CHANNEL_ALPHA
+            );
+
+        }
 
         match ($background->placement()) {
             BackgroundPlacement::Repeat => $this->renderBackgroundRepeat($panel),
